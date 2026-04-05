@@ -91,7 +91,7 @@ interface CardItem {
 
 // ─── Animation constants ──────────────────────────────────────────────────────
 
-const SHAKE_X = [-12, 12, -10, 10, -6, 6, 0] as const;
+const SHAKE_X: number[] = [-12, 12, -10, 10, -6, 6, 0];
 
 const wordVariants = {
   hidden: { x: -70, opacity: 0, scale: 0.8 },
@@ -191,7 +191,7 @@ function DraggableWordCard({
         initial="hidden"
         animate={
           isWrong
-            ? ({ x: SHAKE_X, transition: { duration: 0.45 } } as object)
+            ? { x: SHAKE_X, transition: { duration: 0.45 } }
             : "visible"
         }
         whileTap={isMatched ? undefined : { scale: 0.92 }}
@@ -288,7 +288,7 @@ function DroppableEmojiCard({
       initial="hidden"
       animate={
         isWrong
-          ? ({ x: SHAKE_X, transition: { duration: 0.45 } } as object)
+          ? { x: SHAKE_X, transition: { duration: 0.45 } }
           : "visible"
       }
       whileTap={isMatched ? undefined : { scale: 0.92 }}

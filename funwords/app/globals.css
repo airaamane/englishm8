@@ -42,9 +42,9 @@
   --color-night: #2D3436;
 
   /* Fonts */
-  --font-display: var(--font-baloo2), cursive;
-  --font-body: var(--font-comic-neue), cursive;
-  --font-hand: var(--font-patrick-hand), cursive;
+  --font-display: "Baloo 2", cursive;
+  --font-body: "Comic Neue", cursive;
+  --font-hand: "Patrick Hand", cursive;
 
   /* Border radius */
   --radius-bubble: 50%;
