@@ -6,55 +6,58 @@ import Link from "next/link";
 import { staggerContainer, bounceIn, slideUp } from "@/lib/animations";
 import { useGameStore } from "@/stores/gameStore";
 
-const titleLetters = [
-  { char: "F", color: "text-candy" },
-  { char: "u", color: "text-orange" },
-  { char: "n", color: "text-sun" },
-  { char: "W", color: "text-grass" },
-  { char: "o", color: "text-sky" },
-  { char: "r", color: "text-purple" },
-  { char: "d", color: "text-mint" },
-  { char: "s", color: "text-coral" },
-  { char: "!", color: "text-candy" },
-];
-
 const bouncingEmojis = ["🎈", "🌟", "🎉", "📚", "🦄", "🌈", "🐾"];
 
-const games = [
+const levels = [
   {
+    id: "alphabet",
     href: "/games/alphabet",
-    emoji: "🔤",
-    name: "ABC",
-    description: "Learn letters and sounds!",
-    color: "bg-grass-light border-grass",
+    emoji: "🅰️",
+    name: "Alphabet Island",
+    x: "15%",
+    y: "25%",
+    color: "bg-grass",
+    ring: "border-grass-light",
   },
   {
+    id: "matching",
     href: "/games/matching",
     emoji: "🎯",
-    name: "Match",
-    description: "Match words with pictures!",
-    color: "bg-candy-light border-candy",
+    name: "Match Woods",
+    x: "calc(35% - 50px)",
+    y: "75%",
+    color: "bg-candy",
+    ring: "border-candy-light",
   },
   {
+    id: "spelling",
     href: "/games/spelling",
     emoji: "🐝",
-    name: "Spell",
-    description: "Spell words letter by letter!",
-    color: "bg-sun-dark/10 border-sun",
+    name: "Spelling Hive",
+    x: "calc(70% - 110px)",
+    y: "calc(60% - 40px)",
+    color: "bg-sun-dark",
+    ring: "border-sun",
   },
   {
+    id: "numbers",
     href: "/games/numbers",
     emoji: "🔢",
-    name: "Numbers",
-    description: "Learn to count in English!",
-    color: "bg-sky-light border-sky",
+    name: "Number Peak",
+    x: "85%",
+    y: "25%",
+    color: "bg-sky",
+    ring: "border-sky-light",
   },
   {
+    id: "categories",
     href: "/games/categories",
     emoji: "🗺️",
-    name: "Explore",
-    description: "Discover words by topic!",
-    color: "bg-purple-light border-purple",
+    name: "Explorer Base",
+    x: "75%",
+    y: "calc(89% - 50px)",
+    color: "bg-purple",
+    ring: "border-purple-light",
   },
 ];
 
@@ -69,118 +72,126 @@ export default function HomePage() {
   }, [updateStreak]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <motion.div
-        className="text-center mb-8"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Animated Title */}
-        <motion.h1 className="font-display text-5xl sm:text-7xl font-extrabold mb-4 flex justify-center flex-wrap">
-          {titleLetters.map((l, i) => (
-            <motion.span
-              key={i}
-              variants={bounceIn}
-              className={`${l.color} inline-block`}
-              whileHover={{ scale: 1.3, rotate: [-5, 5, 0] }}
-            >
-              {l.char}
-            </motion.span>
-          ))}
-        </motion.h1>
-
-        <motion.p
-          variants={slideUp}
-          className="font-hand text-2xl sm:text-3xl text-night/70 mb-6"
-        >
-          Learn English the Fun Way! 🎉
-        </motion.p>
-
-        {/* Bouncing Emojis */}
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* Header & Stats Section */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
         <motion.div
-          className="flex justify-center gap-4 mb-8"
+          className="text-center md:text-left"
           variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
         >
-          {bouncingEmojis.map((emoji, i) => (
-            <motion.span
-              key={i}
-              variants={bounceIn}
-              className="text-3xl sm:text-4xl animate-bounce-slow"
-              style={{ animationDelay: `${i * 0.2}s` }}
-              role="img"
-              aria-hidden="true"
-            >
-              {emoji}
-            </motion.span>
-          ))}
+          <motion.h1 
+            variants={bounceIn}
+            className="font-display text-4xl sm:text-5xl font-extrabold text-night mb-2"
+          >
+            Welcome Explorer! 🚀
+          </motion.h1>
+          <motion.p
+            variants={slideUp}
+            className="font-hand text-xl sm:text-2xl text-night/70"
+          >
+            Choose your next learning adventure!
+          </motion.p>
         </motion.div>
-      </motion.div>
 
-      {/* Stats Section */}
-      <motion.div
-        className="flex justify-center gap-4 sm:gap-6 mb-10"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
+        {/* Stats */}
         <motion.div
-          variants={bounceIn}
-          className="flex items-center gap-2 bg-sun/20 px-4 py-2.5 rounded-full shadow-card"
+          className="flex gap-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
         >
-          <span className="text-2xl">⭐</span>
-          <span className="font-display font-bold text-lg text-night">
-            {stars}
-          </span>
-        </motion.div>
-        <motion.div
-          variants={bounceIn}
-          className="flex items-center gap-2 bg-candy/20 px-4 py-2.5 rounded-full shadow-card"
-        >
-          <span className="text-2xl">🔥</span>
-          <span className="font-display font-bold text-lg text-night">
-            {streakDays}
-          </span>
-        </motion.div>
-        <motion.div
-          variants={bounceIn}
-          className="flex items-center gap-2 bg-grass/20 px-4 py-2.5 rounded-full shadow-card"
-        >
-          <span className="text-2xl">✅</span>
-          <span className="font-display font-bold text-lg text-night">
-            {completedGames.length}
-          </span>
-        </motion.div>
-      </motion.div>
-
-      {/* Game Selection Grid */}
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {games.map((game) => (
-          <motion.div key={game.href} variants={slideUp}>
-            <Link href={game.href}>
-              <motion.div
-                whileHover={{ scale: 1.05, y: -6 }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                className={`${game.color} border-2 rounded-card p-6 shadow-card cursor-pointer flex flex-col items-center text-center gap-3 min-h-[180px] justify-center`}
-              >
-                <span className="text-5xl">{game.emoji}</span>
-                <h2 className="font-display text-2xl font-bold text-night">
-                  {game.name}
-                </h2>
-                <p className="font-body text-base text-night/70">
-                  {game.description}
-                </p>
-              </motion.div>
-            </Link>
+          <motion.div
+            variants={bounceIn}
+            className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm border-2 border-sun p-3 rounded-2xl shadow-card min-w-[80px]"
+          >
+            <span className="text-3xl mb-1">⭐</span>
+            <span className="font-display font-extrabold text-xl text-night">
+              {stars}
+            </span>
           </motion.div>
-        ))}
+          <motion.div
+            variants={bounceIn}
+            className="flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm border-2 border-candy p-3 rounded-2xl shadow-card min-w-[80px]"
+          >
+            <span className="text-3xl mb-1">🔥</span>
+            <span className="font-display font-extrabold text-xl text-night">
+              {streakDays}
+            </span>
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* World Map Container */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        className="relative w-full aspect-square max-w-4xl mx-auto rounded-[40px] overflow-hidden border-8 border-white shadow-2xl bg-sky-light/20"
+      >
+        {/* Background Image generated by Nano Banana */}
+        <div 
+          className="absolute inset-0 bg-[url('/images/world-map.png')] bg-cover bg-center"
+          aria-hidden="true"
+        />
+
+        {/* Shadow overlay to make levels pop slightly */}
+        <div className="absolute inset-0 bg-night/5 pointer-events-none" />
+
+        {/* Map Levels */}
+        {levels.map((level, i) => {
+          const isCompleted = completedGames.includes(level.href); // Simple mock check
+
+          return (
+            <motion.div
+              key={level.id}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 + i * 0.1, type: "spring" }}
+              className="absolute"
+              style={{ left: level.x, top: level.y, transform: "translate(-50%, -50%)" }}
+            >
+              <Link href={level.href} className="group relative flex flex-col items-center gap-2">
+                {/* Level Title Bubble */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  className="absolute -top-12 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-card font-display font-bold text-night text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none"
+                >
+                  {level.name}
+                  {/* Little bottom triangle pointer */}
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-solid border-t-white/90 border-t-8 border-x-transparent border-x-8 border-b-0" />
+                </motion.div>
+
+                {/* Level Button */}
+                <motion.div
+                  whileHover={{ scale: 1.15, rotate: [-5, 5, -5, 0] }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 ${level.ring} ${level.color} shadow-btn cursor-pointer z-10`}
+                >
+                  {/* Pulsing ring behind uncompleted levels */}
+                  {!isCompleted && (
+                    <motion.div
+                      animate={{ scale: [1, 1.4], opacity: [0.8, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className={`absolute inset-0 rounded-full ${level.color} z-[-1] pointer-events-none`}
+                    />
+                  )}
+
+                  <span className="text-3xl sm:text-4xl filter drop-shadow-md">{level.emoji}</span>
+                  
+                  {/* Completion checkmark (Mock) */}
+                  {isCompleted && (
+                    <div className="absolute -bottom-1 -right-1 bg-grass text-white text-xs w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm z-20">
+                      ✓
+                    </div>
+                  )}
+                </motion.div>
+              </Link>
+            </motion.div>
+          );
+        })}
       </motion.div>
     </div>
   );

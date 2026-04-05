@@ -94,33 +94,34 @@ export default function AlphabetGame() {
       play("pop");
       setActiveLetter(letter);
 
-      setTappedLetters((prev) => {
-        if (prev.has(letter)) return prev;
+      if (tappedLetters.has(letter)) {
+        return;
+      }
 
+      setTappedLetters((prev) => {
         const next = new Set(prev);
         next.add(letter);
-
-        // Award 1 star for first tap
-        addStars(1);
-        play("star");
-
-        // Check completion
-        if (next.size === 26 && !completedRef.current) {
-          completedRef.current = true;
-          setCompleted(true);
-          addStars(5);
-          setTimeout(() => {
-            fire();
-            play("confetti");
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 4000);
-          }, 400);
-        }
-
         return next;
       });
+
+      // Award 1 star for first tap
+      addStars(1);
+      play("star");
+
+      // Check completion
+      if (tappedCount + 1 === 26 && !completedRef.current) {
+        completedRef.current = true;
+        setCompleted(true);
+        addStars(5);
+        setTimeout(() => {
+          fire();
+          play("confetti");
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 4000);
+        }, 400);
+      }
     },
-    [addStars, play, fire]
+    [tappedLetters, tappedCount, addStars, play, fire]
   );
 
   // ── Reset handler ──────────────────────────────────────────────────
