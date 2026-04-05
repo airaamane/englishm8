@@ -10,6 +10,16 @@ const bouncingEmojis = ["🎈", "🌟", "🎉", "📚", "🦄", "🌈", "🐾"];
 
 const levels = [
   {
+    id: "tracing",
+    href: "/games/tracing",
+    emoji: "✍️",
+    name: "Tracing Sands",
+    x: "20%",
+    y: "50%",
+    color: "bg-mint",
+    ring: "border-mint-light",
+  },
+  {
     id: "alphabet",
     href: "/games/alphabet",
     emoji: "🅰️",

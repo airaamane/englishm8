@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 
 const navItems = [
+  { href: "/games/tracing", label: "Trace", emoji: "✍️", activeColor: "bg-mint/30", dotColor: "bg-mint" },
   { href: "/games/alphabet", label: "ABC", emoji: "🔤", activeColor: "bg-grass-light", dotColor: "bg-grass" },
   { href: "/games/matching", label: "Match", emoji: "🎯", activeColor: "bg-candy-light", dotColor: "bg-candy" },
   { href: "/games/spelling", label: "Spell", emoji: "🐝", activeColor: "bg-sun/20", dotColor: "bg-sun-dark" },

@@ -93,23 +93,13 @@ interface CardItem {
 
 const SHAKE_X: number[] = [-12, 12, -10, 10, -6, 6, 0];
 
-const wordVariants = {
-  hidden: { x: -70, opacity: 0, scale: 0.8 },
+const blockVariants = {
+  hidden: { opacity: 0, scale: 0.4, y: 24 },
   visible: (d: number) => ({
-    x: 0,
     opacity: 1,
     scale: 1,
-    transition: { type: "spring" as const, stiffness: 310, damping: 22, delay: d },
-  }),
-};
-
-const emojiVariants = {
-  hidden: { x: 70, opacity: 0, scale: 0.8 },
-  visible: (d: number) => ({
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    transition: { type: "spring" as const, stiffness: 310, damping: 22, delay: d },
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 420, damping: 18, delay: d },
   }),
 };
 
@@ -127,19 +117,19 @@ function Sparkles() {
       {SPARKS.map((s, i) => (
         <motion.span
           key={i}
-          className="absolute text-base sm:text-lg"
+          className="absolute text-xs sm:text-sm"
           style={{
             top: "50%",
             left: "50%",
-            marginLeft: "-0.6em",
-            marginTop: "-0.6em",
+            marginLeft: "-0.5em",
+            marginTop: "-0.5em",
           }}
           initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
           animate={{
-            x: Math.cos(SPARK_ANGLES[i]) * 58,
-            y: Math.sin(SPARK_ANGLES[i]) * 58 - 4,
+            x: Math.cos(SPARK_ANGLES[i]) * 44,
+            y: Math.sin(SPARK_ANGLES[i]) * 44 - 4,
             opacity: [1, 1, 0],
-            scale: [0, 1.5, 0],
+            scale: [0, 1.4, 0],
           }}
           transition={{ duration: 0.85, ease: "easeOut", delay: i * 0.06 }}
         >
@@ -186,37 +176,36 @@ function DraggableWordCard({
       className="touch-none"
     >
       <motion.button
-        custom={card.index * 0.09}
-        variants={wordVariants}
+        custom={card.index * 0.07}
+        variants={blockVariants}
         initial="hidden"
         animate={
           isWrong
             ? { x: SHAKE_X, transition: { duration: 0.45 } }
             : "visible"
         }
-        whileTap={isMatched ? undefined : { scale: 0.92 }}
+        whileTap={isMatched ? undefined : { scale: 0.9 }}
         onClick={() => onTap(card)}
         disabled={isMatched && !isCorrectAnim}
         className={cn(
-          "relative w-full flex items-center justify-center rounded-[22px]",
-          "min-h-[60px] sm:min-h-[68px] px-3 sm:px-5 py-3",
+          "relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center rounded-2xl",
           "cursor-grab active:cursor-grabbing select-none",
-          "font-display font-bold text-[1.25rem] sm:text-[1.45rem]",
+          "font-display font-bold text-sm sm:text-lg leading-tight text-center",
           "transition-colors duration-150",
           // Base
-          "bg-candy-light border-[3px] border-candy text-candy",
-          "shadow-[0_5px_0_theme(colors.candy-dark)]",
+          "bg-candy-light border-4 border-candy text-candy",
+          "shadow-[0_6px_0_theme(colors.candy-dark)]",
           // Selected
           isSelected &&
             !isCorrectAnim && [
               "bg-candy border-candy-dark text-white",
-              "shadow-[0_0_0_4px_theme(colors.sun),0_5px_0_theme(colors.candy-dark)]",
+              "shadow-[0_0_0_4px_theme(colors.sun),0_6px_0_theme(colors.candy-dark)]",
             ],
           // Correct anim
           isCorrectAnim &&
-            "bg-grass-light border-grass text-grass-dark shadow-[0_5px_0_theme(colors.grass-dark)]",
-          // Matched out
-          isMatched && !isCorrectAnim && "opacity-30 pointer-events-none",
+            "bg-grass-light border-grass text-grass-dark shadow-[0_6px_0_theme(colors.grass-dark)]",
+          // Matched — green "done" state
+          isMatched && !isCorrectAnim && "bg-grass-light border-grass/40 text-grass/50 shadow-none pointer-events-none",
           // Ghost while dragging
           isDragging && "opacity-20",
         )}
@@ -242,15 +231,15 @@ function DraggableWordCard({
         {/* Pulsing glow ring when selected */}
         {isSelected && !isCorrectAnim && (
           <motion.div
-            className="absolute inset-0 rounded-[20px] border-[3px] border-sun"
-            animate={{ opacity: [1, 0.15, 1], scale: [1, 1.05, 1] }}
+            className="absolute inset-0 rounded-xl border-[3px] border-sun"
+            animate={{ opacity: [1, 0.15, 1], scale: [1, 1.06, 1] }}
             transition={{ repeat: Infinity, duration: 0.9 }}
           />
         )}
 
-        {/* Matched checkmark */}
+        {/* Matched checkmark badge */}
         {isMatched && !isCorrectAnim && (
-          <span className="absolute top-1 right-2 text-xs text-grass font-bold">✓</span>
+          <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-grass rounded-full flex items-center justify-center text-[11px] text-white font-bold z-20 shadow-sm">✓</span>
         )}
       </motion.button>
     </div>
@@ -283,34 +272,33 @@ function DroppableEmojiCard({
   return (
     <motion.button
       ref={(node) => setNodeRef(node)}
-      custom={card.index * 0.09 + 0.05}
-      variants={emojiVariants}
+      custom={card.index * 0.07 + 0.04}
+      variants={blockVariants}
       initial="hidden"
       animate={
         isWrong
           ? { x: SHAKE_X, transition: { duration: 0.45 } }
           : "visible"
       }
-      whileTap={isMatched ? undefined : { scale: 0.92 }}
+      whileTap={isMatched ? undefined : { scale: 0.9 }}
       onClick={() => onTap(card)}
       disabled={isMatched && !isCorrectAnim}
       className={cn(
-        "relative w-full flex items-center justify-center rounded-[22px]",
-        "min-h-[60px] sm:min-h-[68px] px-3 sm:px-5 py-3",
+        "relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center rounded-2xl",
         "cursor-pointer select-none",
-        "text-[2.3rem] sm:text-[2.6rem]",
+        "text-[2rem] sm:text-[2.5rem]",
         "transition-all duration-150",
         // Base
-        "bg-ocean-light border-[3px] border-ocean",
-        "shadow-[0_5px_0_theme(colors.ocean-dark)]",
+        "bg-ocean-light border-4 border-ocean",
+        "shadow-[0_6px_0_theme(colors.ocean-dark)]",
         // Drag-over state
         isOver &&
-          "bg-sun/30 border-sun scale-[1.06] shadow-[0_5px_0_theme(colors.sun-dark)]",
+          "bg-sun/30 border-sun scale-[1.08] shadow-[0_6px_0_theme(colors.sun-dark)]",
         // Correct anim
         isCorrectAnim &&
-          "bg-grass-light border-grass shadow-[0_5px_0_theme(colors.grass-dark)]",
-        // Matched out
-        isMatched && !isCorrectAnim && "opacity-30 pointer-events-none",
+          "bg-grass-light border-grass shadow-[0_6px_0_theme(colors.grass-dark)]",
+        // Matched — green "done" state
+        isMatched && !isCorrectAnim && "bg-grass-light border-grass/40 shadow-none pointer-events-none opacity-60",
       )}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
@@ -334,41 +322,63 @@ function DroppableEmojiCard({
       {/* Shimmering overlay on drag-over */}
       {isOver && (
         <motion.div
-          className="absolute inset-0 rounded-[20px] bg-sun/20"
+          className="absolute inset-0 rounded-xl bg-sun/20"
           animate={{ opacity: [0.8, 0.1, 0.8] }}
           transition={{ repeat: Infinity, duration: 0.55 }}
         />
       )}
 
-      {/* Matched checkmark */}
+      {/* Matched checkmark badge */}
       {isMatched && !isCorrectAnim && (
-        <span className="absolute top-1 right-2 text-xs text-grass font-bold">✓</span>
+        <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-grass rounded-full flex items-center justify-center text-[11px] text-white font-bold z-20 shadow-sm">✓</span>
       )}
     </motion.button>
   );
 }
 
-// ─── Animated arrows between the two columns ─────────────────────────────────
+// ─── Matched pairs shelf ────────────────────────────────────────────────────
 
-function CenterArrows({ count }: { count: number }) {
+function MatchedShelf({
+  matched,
+  total,
+}: {
+  matched: { word: string; emoji: string }[];
+  total: number;
+}) {
+  if (matched.length === 0) return null;
+
   return (
-    <div className="flex flex-col gap-3 items-center w-8 sm:w-12 shrink-0">
-      {Array.from({ length: count }).map((_, i) => (
-        <motion.div
-          key={i}
-          className="min-h-[60px] sm:min-h-[68px] flex items-center justify-center text-lg sm:text-xl"
-          animate={{ x: [0, 6, 0], scale: [1, 1.18, 1] }}
-          transition={{
-            repeat: Infinity,
-            duration: 1.05,
-            delay: i * 0.18,
-            ease: "easeInOut",
-          }}
-        >
-          ➡️
-        </motion.div>
-      ))}
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full max-w-md"
+    >
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="text-lg">🏆</span>
+        <span className="font-display text-sm font-bold text-grass-dark">
+          Collected
+        </span>
+        <span className="font-body text-xs text-white bg-grass rounded-full px-2 py-0.5 font-bold">
+          {matched.length} / {total}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {matched.map((m) => (
+          <motion.div
+            key={m.word}
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 18 }}
+            className="flex items-center gap-1.5 bg-white/80 border-2 border-grass rounded-2xl px-3 py-1.5 shadow-[0_3px_0_theme(colors.grass-dark/30)]"
+          >
+            <span className="font-display font-bold text-sm text-grass-dark">
+              {m.word}
+            </span>
+            <span className="text-xl leading-none">{m.emoji}</span>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 
@@ -423,6 +433,10 @@ export default function MatchingGame() {
   const totalPairs = levelDef.pairs;
   const progress = matchedWords.size / totalPairs;
   const allCards = useMemo(() => [...wordCards, ...emojiCards], [wordCards, emojiCards]);
+  const matchedList = useMemo(
+    () => Array.from(matchedWords).map((w) => ({ word: w, emoji: lookupEmoji(w) })),
+    [matchedWords],
+  );
 
   // Toast auto-hide
   useEffect(() => {
@@ -622,40 +636,50 @@ export default function MatchingGame() {
           )}
         </div>
 
-        {/* ── Game board: [Words] [Arrows] [Emojis] ──────────────────── */}
-        <div className="w-full flex flex-row gap-1 sm:gap-2 justify-center items-start">
-          {/* Word cards */}
-          <div className="flex flex-col gap-3 flex-1 min-w-0">
-            {wordCards.map((card) => (
-              <DraggableWordCard
-                key={card.id}
-                card={card}
-                isSelected={selected === card.id}
-                isWrong={wrongPair?.includes(card.id) ?? false}
-                isMatched={matchedWords.has(card.word)}
-                isCorrectAnim={correctPair?.includes(card.id) ?? false}
-                onTap={handleTap}
-              />
-            ))}
+        {/* ── Game board: two grids of square blocks ────────────────── */}
+        <div className="w-full flex flex-row gap-5 sm:gap-10 justify-center items-start">
+          {/* Word blocks */}
+          <div className="flex flex-col items-center gap-2">
+            <span className="font-display text-xs sm:text-sm font-bold uppercase tracking-wider text-candy/60">
+              Words
+            </span>
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              {wordCards.map((card) => (
+                <DraggableWordCard
+                  key={card.id}
+                  card={card}
+                  isSelected={selected === card.id}
+                  isWrong={wrongPair?.includes(card.id) ?? false}
+                  isMatched={matchedWords.has(card.word)}
+                  isCorrectAnim={correctPair?.includes(card.id) ?? false}
+                  onTap={handleTap}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Bouncing arrows */}
-          <CenterArrows count={totalPairs} />
-
-          {/* Emoji cards */}
-          <div className="flex flex-col gap-3 flex-1 min-w-0">
-            {emojiCards.map((card) => (
-              <DroppableEmojiCard
-                key={card.id}
-                card={card}
-                isWrong={wrongPair?.includes(card.id) ?? false}
-                isMatched={matchedWords.has(card.word)}
-                isCorrectAnim={correctPair?.includes(card.id) ?? false}
-                onTap={handleTap}
-              />
-            ))}
+          {/* Emoji blocks */}
+          <div className="flex flex-col items-center gap-2">
+            <span className="font-display text-xs sm:text-sm font-bold uppercase tracking-wider text-ocean/60">
+              Pictures
+            </span>
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              {emojiCards.map((card) => (
+                <DroppableEmojiCard
+                  key={card.id}
+                  card={card}
+                  isWrong={wrongPair?.includes(card.id) ?? false}
+                  isMatched={matchedWords.has(card.word)}
+                  isCorrectAnim={correctPair?.includes(card.id) ?? false}
+                  onTap={handleTap}
+                />
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* ── Matched pairs shelf ────────────────────────────────────── */}
+        <MatchedShelf matched={matchedList} total={totalPairs} />
 
         {/* ── Level complete / Champion / Finished ────────────────────── */}
         <AnimatePresence>
@@ -770,14 +794,14 @@ export default function MatchingGame() {
         {activeDragCard && (
           <motion.div
             initial={{ scale: 1, rotate: 0 }}
-            animate={{ scale: 1.12, rotate: 4 }}
+            animate={{ scale: 1.1, rotate: 3 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              "flex items-center justify-center rounded-[22px]",
-              "px-5 py-3 min-w-[90px]",
-              "bg-candy border-[3px] border-candy-dark text-white",
-              "font-display font-bold text-[1.4rem]",
-              "shadow-[0_14px_32px_rgba(255,107,138,0.55)]",
+              "flex items-center justify-center rounded-2xl",
+              "w-20 h-20 sm:w-24 sm:h-24",
+              "bg-candy border-4 border-candy-dark text-white",
+              "font-display font-bold text-sm sm:text-lg",
+              "shadow-[0_14px_28px_rgba(255,107,138,0.5)]",
               "cursor-grabbing select-none pointer-events-none",
             )}
           >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
 import { useSound } from "@/hooks/useSound";
@@ -17,7 +17,7 @@ import { categories, getWordsByCategory } from "@/lib/words";
 import type { WordEntry } from "@/lib/words";
 
 // ---------------------------------------------------------------------------
-// Color mapping helpers — Tailwind classes keyed by category color
+// Color mapping helpers
 // ---------------------------------------------------------------------------
 
 const colorMap: Record<
@@ -82,8 +82,14 @@ const colorMap: Record<
 };
 
 // ---------------------------------------------------------------------------
-// Wobble animation for unrevealed cards
+// Helpers
 // ---------------------------------------------------------------------------
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+const SHAKE_X = [-10, 10, -8, 8, -4, 4, 0];
 
 const wobble = {
   idle: {
@@ -120,16 +126,37 @@ export default function CategoriesGame() {
     }
   );
 
-  // Track which categories are "complete" (all revealed) so we only fire confetti once
+  // Track completed categories (confetti fired once)
   const [completedCategories, setCompletedCategories] = useState<Set<string>>(
     new Set()
   );
+
+  // Find-the-word challenge state
+  const [targetWord, setTargetWord] = useState<WordEntry | null>(null);
+  const [peekCard, setPeekCard] = useState<string | null>(null);
+  const [shakeCard, setShakeCard] = useState<string | null>(null);
+  const [correctCard, setCorrectCard] = useState<string | null>(null);
 
   // Toast state
   const [toast, setToast] = useState<{
     message: string;
     emoji: string;
   } | null>(null);
+
+  // Guard against double-taps during animation
+  const animating = peekCard !== null || shakeCard !== null || correctCard !== null;
+
+  // Timeout refs for cleanup
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const addTimer = useCallback((fn: () => void, ms: number) => {
+    const t = setTimeout(fn, ms);
+    timersRef.current.push(t);
+    return t;
+  }, []);
+
+  useEffect(() => {
+    return () => timersRef.current.forEach(clearTimeout);
+  }, []);
 
   // Auto-hide toast
   useEffect(() => {
@@ -154,12 +181,33 @@ export default function CategoriesGame() {
     (sum, set) => sum + set.size,
     0
   );
+  const categoryComplete =
+    categoryWords.length > 0 && revealed.size === categoryWords.length;
 
-  // Check category completion
+  // -----------------------------------------------------------------------
+  // Pick initial target on mount + on category change
+  // -----------------------------------------------------------------------
+  useEffect(() => {
+    const words = getWordsByCategory(activeCategory);
+    const rev = revealedMap[activeCategory];
+    const unrevealed = words.filter((w) => !rev.has(w.word));
+    if (unrevealed.length > 0) {
+      setTargetWord(pickRandom(unrevealed));
+    } else {
+      setTargetWord(null);
+    }
+    setPeekCard(null);
+    setShakeCard(null);
+    setCorrectCard(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory]);
+
+  // -----------------------------------------------------------------------
+  // Category completion
+  // -----------------------------------------------------------------------
   useEffect(() => {
     if (
-      categoryWords.length > 0 &&
-      revealed.size === categoryWords.length &&
+      categoryComplete &&
       !completedCategories.has(activeCategory)
     ) {
       const t = setTimeout(() => {
@@ -168,15 +216,14 @@ export default function CategoriesGame() {
         addStars(3);
         setCompletedCategories((prev) => new Set(prev).add(activeCategory));
         setToast({
-          message: `You discovered all the ${activeCategoryData.name.toLowerCase()}!`,
+          message: `You found all the ${activeCategoryData.name.toLowerCase()}!`,
           emoji: activeCategoryData.emoji,
         });
-      }, 400);
+      }, 500);
       return () => clearTimeout(t);
     }
   }, [
-    revealed.size,
-    categoryWords.length,
+    categoryComplete,
     activeCategory,
     completedCategories,
     fireConfetti,
@@ -198,39 +245,76 @@ export default function CategoriesGame() {
   );
 
   // -----------------------------------------------------------------------
-  // Card flip
+  // Card tap — find-the-word challenge
   // -----------------------------------------------------------------------
-  const handleCardFlip = useCallback(
+  const handleCardTap = useCallback(
     (word: WordEntry) => {
-      const isRevealed = revealed.has(word.word);
+      // Already revealed — just re-speak
+      if (revealed.has(word.word)) {
+        play("pop");
+        speak(word.word);
+        return;
+      }
 
-      play("whoosh");
+      // Block taps during animation
+      if (animating || !targetWord) return;
 
-      if (isRevealed) {
-        // Flip back — unrevealing
-        setRevealedMap((prev) => {
-          const next = { ...prev };
-          const newSet = new Set(next[activeCategory]);
-          newSet.delete(word.word);
-          next[activeCategory] = newSet;
-          return next;
-        });
-      } else {
-        // Reveal
-        setRevealedMap((prev) => {
-          const next = { ...prev };
-          const newSet = new Set(next[activeCategory]);
-          newSet.add(word.word);
-          next[activeCategory] = newSet;
-          return next;
-        });
+      if (word.word === targetWord.word) {
+        // ── Correct! ──────────────────────────────────────────────
+        setCorrectCard(word.word);
+        play("success");
+        speak(word.word); // auto-speak on reveal
 
-        // First reveal: award 1 star
         addStars(1);
-        play("star");
+
+        // Reveal the card
+        const newRevealed = new Set(revealed);
+        newRevealed.add(word.word);
+        setRevealedMap((prev) => ({
+          ...prev,
+          [activeCategory]: newRevealed,
+        }));
+
+        // After celebration, pick next target
+        addTimer(() => {
+          setCorrectCard(null);
+          const remaining = categoryWords.filter(
+            (w) => !newRevealed.has(w.word)
+          );
+          if (remaining.length > 0) {
+            setTargetWord(pickRandom(remaining));
+          } else {
+            setTargetWord(null);
+          }
+        }, 1200);
+      } else {
+        // ── Wrong — peek then shake ──────────────────────────────
+        setPeekCard(word.word);
+        play("wrong");
+
+        // Start shake while still peeked
+        addTimer(() => {
+          setShakeCard(word.word);
+        }, 500);
+
+        // Flip back + clear shake
+        addTimer(() => {
+          setPeekCard(null);
+          setShakeCard(null);
+        }, 1000);
       }
     },
-    [activeCategory, revealed, play, addStars]
+    [
+      revealed,
+      animating,
+      targetWord,
+      activeCategory,
+      categoryWords,
+      play,
+      speak,
+      addStars,
+      addTimer,
+    ]
   );
 
   // -----------------------------------------------------------------------
@@ -318,6 +402,77 @@ export default function CategoriesGame() {
         </motion.div>
       </div>
 
+      {/* ------- Target Prompt ------- */}
+      <div className="min-h-[100px] flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {targetWord ? (
+            <motion.div
+              key={targetWord.word}
+              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 22 }}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <motion.span
+                className="text-5xl"
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+              >
+                {targetWord.emoji}
+              </motion.span>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-night">
+                  Find the{" "}
+                  <span className={colors.text}>{targetWord.word}</span>!
+                </h2>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    play("pop");
+                    speak(targetWord.word);
+                  }}
+                  className="text-xl min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/40 transition-colors cursor-pointer"
+                  aria-label={`Hear ${targetWord.word}`}
+                >
+                  🔊
+                </button>
+              </div>
+              <p className="font-body text-sm text-night/50 text-center max-w-xs">
+                {targetWord.hint}
+              </p>
+            </motion.div>
+          ) : categoryComplete ? (
+            <motion.div
+              key="complete"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 350, damping: 18 }}
+              className="flex items-center gap-2"
+            >
+              <motion.span
+                className="text-3xl"
+                animate={{ rotate: [0, 12, -12, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+              >
+                🎉
+              </motion.span>
+              <span className="font-display text-xl font-bold text-grass-dark">
+                All found!
+              </span>
+              <motion.span
+                className="text-3xl"
+                animate={{ rotate: [0, -12, 12, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+              >
+                🎉
+              </motion.span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
       {/* ------- Flip Card Grid ------- */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -330,6 +485,10 @@ export default function CategoriesGame() {
         >
           {categoryWords.map((word, index) => {
             const isRevealed = revealed.has(word.word);
+            const isPeeking = peekCard === word.word;
+            const isShaking = shakeCard === word.word;
+            const isCorrectAnim = correctCard === word.word;
+            const flipped = isRevealed || isPeeking;
 
             return (
               <motion.div
@@ -337,29 +496,41 @@ export default function CategoriesGame() {
                 variants={bounceIn}
                 custom={index}
                 className="perspective-[800px]"
+                // Shake on the outer wrapper so it doesn't interfere with flip
+                animate={
+                  isShaking
+                    ? { x: SHAKE_X, transition: { duration: 0.45 } }
+                    : { x: 0 }
+                }
               >
                 <motion.button
-                  onClick={() => handleCardFlip(word)}
-                  className="relative w-full cursor-pointer select-none"
+                  onClick={() => handleCardTap(word)}
+                  className={cn(
+                    "relative w-full cursor-pointer select-none",
+                    // Revealed card: green glow ring
+                    isRevealed && !isCorrectAnim && "ring-[3px] ring-grass/30 rounded-card",
+                    // Just-matched card: bright green glow
+                    isCorrectAnim && "ring-4 ring-grass rounded-card",
+                  )}
                   style={{
                     minHeight: 160,
                     transformStyle: "preserve-3d",
                     WebkitTapHighlightColor: "transparent",
                   }}
                   animate={{
-                    rotateY: isRevealed ? 180 : 0,
+                    rotateY: flipped ? 180 : 0,
                   }}
                   transition={{
                     type: "spring",
                     stiffness: 260,
                     damping: 20,
                   }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={!animating ? { scale: 0.95 } : undefined}
                 >
                   {/* FRONT — Mystery "?" card */}
                   <motion.div
-                    variants={isRevealed ? undefined : wobble}
-                    animate={isRevealed ? undefined : "idle"}
+                    variants={!flipped ? wobble : undefined}
+                    animate={!flipped ? "idle" : undefined}
                     className={cn(
                       "absolute inset-0 rounded-card flex items-center justify-center backface-hidden",
                       colors.bg,
@@ -376,8 +547,10 @@ export default function CategoriesGame() {
                   <div
                     className={cn(
                       "absolute inset-0 rounded-card flex flex-col items-center justify-center gap-1.5 backface-hidden bg-white border-[3px]",
-                      colors.border,
-                      "shadow-card"
+                      isCorrectAnim ? "border-grass" : colors.border,
+                      isCorrectAnim
+                        ? "shadow-[0_0_20px_theme(colors.grass/40)]"
+                        : "shadow-card"
                     )}
                     style={{
                       backfaceVisibility: "hidden",
@@ -390,14 +563,41 @@ export default function CategoriesGame() {
                     <span className="font-display font-bold text-[1.4rem] text-night">
                       {word.word}
                     </span>
-                    <SpeakerButton
-                      word={word.word}
-                      speak={speak}
-                      play={play}
-                      color={activeCategoryData.color}
-                    />
+                    {/* Speaker button — only on revealed cards (not during peek) */}
+                    {isRevealed && (
+                      <SpeakerButton
+                        word={word.word}
+                        speak={speak}
+                        play={play}
+                        color={activeCategoryData.color}
+                      />
+                    )}
                   </div>
                 </motion.button>
+
+                {/* Revealed checkmark badge */}
+                {isRevealed && !isCorrectAnim && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                    className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-grass rounded-full flex items-center justify-center text-[11px] text-white font-bold z-20 shadow-sm pointer-events-none"
+                  >
+                    ✓
+                  </motion.span>
+                )}
+
+                {/* Correct match star burst */}
+                {isCorrectAnim && (
+                  <motion.span
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                    className="absolute -top-2 -right-2 text-2xl z-20 pointer-events-none"
+                  >
+                    ⭐
+                  </motion.span>
+                )}
               </motion.div>
             );
           })}

@@ -73,6 +73,8 @@ const BUBBLE_COLORS = [
   { bg: "bg-mint", border: "border-mint-dark", shadow: "shadow-[0_4px_0_#3DD4A7]" },
 ];
 
+const SHAKE_X = [-10, 10, -8, 8, -4, 4, 0];
+
 /* ── helpers ─────────────────────────────────────────── */
 
 function rand(min: number, max: number) {
@@ -144,6 +146,35 @@ function generateRound(): RoundData {
   return { number, emoji, choices, emojiPositions: gridPositions(number) };
 }
 
+/* ── sparkle burst on correct ──────────────────────── */
+
+const SPARKS = ["⭐", "✨", "🌟", "💫", "⭐", "✨", "🌟", "💫"];
+const SPARK_ANGLES = SPARKS.map((_, i) => (i / SPARKS.length) * Math.PI * 2);
+
+function BubbleSparkles() {
+  return (
+    <div className="absolute inset-0 pointer-events-none" style={{ overflow: "visible", zIndex: 30 }}>
+      {SPARKS.map((s, i) => (
+        <motion.span
+          key={i}
+          className="absolute text-sm"
+          style={{ top: "50%", left: "50%", marginLeft: "-0.4em", marginTop: "-0.4em" }}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+          animate={{
+            x: Math.cos(SPARK_ANGLES[i]) * 48,
+            y: Math.sin(SPARK_ANGLES[i]) * 48,
+            opacity: [1, 1, 0],
+            scale: [0, 1.3, 0],
+          }}
+          transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.04 }}
+        >
+          {s}
+        </motion.span>
+      ))}
+    </div>
+  );
+}
+
 /* ── component ───────────────────────────────────────── */
 
 export default function NumbersGame() {
@@ -153,7 +184,7 @@ export default function NumbersGame() {
   const { addStars, completeGame, updateStreak } = useGameStore();
 
   const [round, setRound] = useState(1);
-  const [roundData, setRoundData] = useState<RoundData>(() => generateRound());
+  const [roundData, setRoundData] = useState<RoundData | null>(null);
   const [answered, setAnswered] = useState(false);
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [disabledChoices, setDisabledChoices] = useState<Set<number>>(new Set());
@@ -166,13 +197,19 @@ export default function NumbersGame() {
   const [wordsLearned, setWordsLearned] = useState<Set<string>>(new Set());
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const [wiggleEmojis, setWiggleEmojis] = useState(false);
+  const [celebrateEmojis, setCelebrateEmojis] = useState(false);
   const [revealedCorrect, setRevealedCorrect] = useState(false);
 
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Generate first round on mount (avoids hydration mismatch from Math.random)
+  useEffect(() => {
+    if (!roundData) setRoundData(generateRound());
+  }, [roundData]);
+
   // Speak the question on round start
   useEffect(() => {
+    if (!roundData) return;
     const name = roundData.number === 1
       ? EMOJI_NAMES[roundData.emoji]
       : EMOJI_PLURALS[roundData.emoji];
@@ -183,6 +220,7 @@ export default function NumbersGame() {
   }, [roundData, speak]);
 
   const speakQuestion = useCallback(() => {
+    if (!roundData) return;
     const name = roundData.number === 1
       ? EMOJI_NAMES[roundData.emoji]
       : EMOJI_PLURALS[roundData.emoji];
@@ -209,13 +247,13 @@ export default function NumbersGame() {
     setWrongChoice(null);
     setShowWord(false);
     setEarnedStar(false);
-    setWiggleEmojis(false);
+    setCelebrateEmojis(false);
     setRevealedCorrect(false);
   }, [round, addStars, completeGame, updateStreak, play, fire]);
 
   const handleChoice = useCallback(
     (choice: number) => {
-      if (answered || disabledChoices.has(choice)) return;
+      if (!roundData || answered || disabledChoices.has(choice)) return;
 
       play("tap");
 
@@ -223,8 +261,9 @@ export default function NumbersGame() {
         // Correct!
         setCorrectChoice(choice);
         setAnswered(true);
-        setWiggleEmojis(true);
+        setCelebrateEmojis(true);
         play("success");
+        fire(); // confetti burst on every correct answer
 
         const word = NUMBER_WORDS[roundData.number];
         const gotStar = wrongAttempts === 0;
@@ -240,14 +279,14 @@ export default function NumbersGame() {
         setTimeout(() => {
           setShowWord(true);
           speak(word);
-        }, 400);
+        }, 500);
 
-        // Auto-advance after 1.5s
+        // Auto-advance after 2.5s to let celebration breathe
         advanceTimerRef.current = setTimeout(() => {
           advanceRound();
-        }, 1500);
+        }, 2500);
       } else {
-        // Wrong
+        // Wrong — just shake
         setWrongChoice(choice);
         play("wrong");
 
@@ -279,7 +318,7 @@ export default function NumbersGame() {
         }, 500);
       }
     },
-    [answered, disabledChoices, roundData, wrongAttempts, play, speak, addStars, advanceRound]
+    [answered, disabledChoices, roundData, wrongAttempts, play, speak, addStars, advanceRound, fire]
   );
 
   // Cleanup timer on unmount
@@ -288,6 +327,9 @@ export default function NumbersGame() {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
     };
   }, []);
+
+  // Not yet mounted — render nothing to avoid hydration mismatch
+  if (!roundData) return null;
 
   const emojiName = roundData.number === 1
     ? EMOJI_NAMES[roundData.emoji]
@@ -375,7 +417,7 @@ export default function NumbersGame() {
             setEarnedStar(false);
             setSessionStars(0);
             setWordsLearned(new Set());
-            setWiggleEmojis(false);
+            setCelebrateEmojis(false);
             setRevealedCorrect(false);
           }}
           className="bg-sky text-white font-display font-bold text-lg px-8 py-3 rounded-button shadow-btn hover:shadow-btn-hover active:shadow-btn-active mt-4 min-h-[48px] min-w-[48px]"
@@ -433,10 +475,25 @@ export default function NumbersGame() {
               <motion.span
                 key={`${round}-emoji-${i}`}
                 variants={bounceIn}
-                className={cn(
-                  "absolute text-[2.5rem] select-none",
-                  wiggleEmojis && "animate-wiggle"
-                )}
+                className="absolute text-[2.5rem] select-none"
+                animate={
+                  celebrateEmojis
+                    ? {
+                        y: [0, -18, 0],
+                        scale: [1, 1.2, 1],
+                        rotate: [pos.rotate, pos.rotate + 15, pos.rotate],
+                      }
+                    : {}
+                }
+                transition={
+                  celebrateEmojis
+                    ? {
+                        duration: 0.5,
+                        delay: i * 0.03,
+                        ease: "easeOut",
+                      }
+                    : undefined
+                }
                 style={{
                   left: `calc(50% + ${pos.x}px)`,
                   top: `calc(50% + ${pos.y}px)`,
@@ -487,12 +544,19 @@ export default function NumbersGame() {
           const isRevealed = revealedCorrect && choice === roundData.number;
 
           let bgClass = color.bg;
+          let borderClass = color.border;
           let shadowClass = color.shadow;
-          if (isCorrect || isRevealed) {
+          if (isCorrect && !isRevealed) {
             bgClass = "bg-grass";
+            borderClass = "border-grass-dark";
+            shadowClass = "shadow-[0_4px_0_#3DA85D]";
+          } else if (isRevealed) {
+            bgClass = "bg-grass";
+            borderClass = "border-grass-dark";
             shadowClass = "shadow-[0_4px_0_#3DA85D]";
           } else if (isWrong) {
             bgClass = "bg-coral";
+            borderClass = "border-coral-dark";
             shadowClass = "shadow-[0_4px_0_#E06665]";
           }
 
@@ -504,9 +568,13 @@ export default function NumbersGame() {
               whileTap={!answered && !isDisabled ? { scale: 0.92, y: 2 } : {}}
               animate={
                 isWrong
-                  ? { x: [-8, 8, -6, 6, -3, 3, 0], transition: { duration: 0.4 } }
+                  ? { x: SHAKE_X, transition: { duration: 0.4 } }
                   : isCorrect && !isRevealed
-                  ? { scale: [1, 1.2, 1], transition: { duration: 0.3 } }
+                  ? {
+                      scale: [1, 1.35, 1.15],
+                      y: [0, -12, -4],
+                      transition: { duration: 0.5, ease: "easeOut" },
+                    }
                   : isRevealed
                   ? {
                       scale: [1, 1.15, 1, 1.15, 1],
@@ -517,48 +585,80 @@ export default function NumbersGame() {
               onClick={() => handleChoice(choice)}
               disabled={answered || isDisabled}
               className={cn(
-                "w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all",
+                "relative w-16 h-16 rounded-full flex items-center justify-center border-2 transition-colors",
                 bgClass,
                 shadowClass,
-                color.border,
+                borderClass,
                 "font-display font-[800] text-[1.8rem] text-white",
                 "min-w-[48px] min-h-[48px]",
-                isDisabled && !isRevealed && "opacity-40 cursor-not-allowed",
-                answered && !isCorrect && !isRevealed && "opacity-60",
+                isDisabled && !isRevealed && "opacity-30 pointer-events-none scale-90",
+                answered && !isCorrect && !isRevealed && "opacity-40 scale-90",
                 !answered && !isDisabled && "cursor-pointer active:translate-y-[2px] active:shadow-btn-active"
               )}
               aria-label={`${choice}`}
             >
-              {choice}
+              {/* Sparkle burst on correct */}
+              {isCorrect && !isRevealed && <BubbleSparkles />}
+              <span className="relative z-10">{choice}</span>
             </motion.button>
           );
         })}
       </motion.div>
 
-      {/* English word reveal */}
-      <div className="h-16 flex items-center justify-center mt-2">
+      {/* English word reveal — celebratory banner */}
+      <div className="h-24 flex items-center justify-center mt-2">
         <AnimatePresence>
           {showWord && (
             <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={{ scale: 0, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15 }}
-              className="flex flex-col items-center gap-1"
-            >
-              <span className="font-display text-4xl font-bold text-grass-dark">
-                {word}
-              </span>
-              {earnedStar && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                  className="text-xl"
-                >
-                  ⭐ +1
-                </motion.span>
+              transition={{ type: "spring", stiffness: 400, damping: 16 }}
+              className={cn(
+                "flex items-center gap-3 px-6 py-3 rounded-2xl",
+                revealedCorrect
+                  ? "bg-ocean-light border-2 border-ocean"
+                  : "bg-grass-light border-2 border-grass shadow-[0_4px_0_theme(colors.grass-dark/30)]",
               )}
+            >
+              <motion.span
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.15, type: "spring", stiffness: 500 }}
+                className="text-3xl"
+              >
+                {revealedCorrect ? "💡" : "🎉"}
+              </motion.span>
+              <div className="flex flex-col items-start">
+                <span className={cn(
+                  "font-display text-3xl font-bold",
+                  revealedCorrect ? "text-ocean-dark" : "text-grass-dark",
+                )}>
+                  {word}
+                </span>
+                {earnedStar && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3, type: "spring" }}
+                    className="flex items-center gap-1"
+                  >
+                    <motion.span
+                      animate={{ rotate: [0, 20, -20, 0], scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, delay: 0.4 }}
+                      className="text-lg"
+                    >
+                      ⭐
+                    </motion.span>
+                    <span className="font-display text-sm font-bold text-sun-dark">+1 star!</span>
+                  </motion.div>
+                )}
+                {revealedCorrect && (
+                  <span className="font-body text-xs text-ocean-dark/60">
+                    The answer was {roundData.number}
+                  </span>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
