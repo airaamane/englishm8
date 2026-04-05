@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(node -e \"const pkg = require\\('@lottiefiles/dotlottie-react/package.json'\\); console.log\\('version:', pkg.version\\); console.log\\('main:', pkg.main\\); console.log\\('exports:', JSON.stringify\\(pkg.exports, null, 2\\)\\)\")"
+    ]
+  }
+}

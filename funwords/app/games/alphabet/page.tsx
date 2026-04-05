@@ -58,16 +58,16 @@ const BUBBLE_COLORS = [
   "bg-sky",
 ];
 
-const BUBBLE_SHADOW_COLORS = [
-  "rgba(255,107,138,0.35)",
-  "rgba(74,144,217,0.35)",
-  "rgba(78,203,113,0.35)",
-  "rgba(255,159,67,0.35)",
-  "rgba(162,155,254,0.35)",
-  "rgba(85,239,196,0.35)",
-  "rgba(255,118,117,0.35)",
-  "rgba(255,217,61,0.35)",
-  "rgba(110,198,255,0.35)",
+const BUBBLE_GLOW_COLORS = [
+  "#FF6B8A", // candy
+  "#4A90D9", // ocean
+  "#4ECB71", // grass
+  "#FF9F43", // orange
+  "#A29BFE", // purple
+  "#55EFC4", // mint
+  "#FF7675", // coral
+  "#FFD93D", // sun
+  "#6EC6FF", // sky
 ];
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -174,45 +174,81 @@ export default function AlphabetGame() {
           const isTapped = tappedLetters.has(item.letter);
           const isActive = activeLetter === item.letter;
 
+          const glowColor = BUBBLE_GLOW_COLORS[colorIdx];
+
           return (
-            <motion.button
-              key={item.letter}
-              variants={bounceIn}
-              whileHover={{
-                scale: 1.15,
-                transition: { type: "spring", stiffness: 400, damping: 12 },
-              }}
-              whileTap={{
-                scale: 0.92,
-                transition: { type: "spring", stiffness: 400, damping: 15 },
-              }}
-              onTap={() => handleTap(item.letter)}
-              className={cn(
-                "relative flex items-center justify-center rounded-full",
-                "w-[50px] h-[50px] sm:w-[64px] sm:h-[64px] md:w-[68px] md:h-[68px]",
-                "min-w-[48px] min-h-[48px]",
-                "font-display font-extrabold text-white text-lg sm:text-2xl",
-                "cursor-pointer select-none",
-                "transition-shadow duration-150",
-                BUBBLE_COLORS[colorIdx],
-                isActive && "ring-4 ring-white ring-offset-2",
-                isTapped && "opacity-90"
-              )}
-              style={{
-                boxShadow: isActive
-                  ? `0 4px 0 rgba(0,0,0,0.15), 0 0 20px ${BUBBLE_SHADOW_COLORS[colorIdx]}`
-                  : "0 4px 0 rgba(0,0,0,0.15)",
-                textShadow: "0 1px 2px rgba(0,0,0,0.2)",
-              }}
-              aria-label={`Letter ${item.letter}`}
-            >
-              {item.letter}
-              {isTapped && (
-                <span className="absolute -top-1 -right-1 text-xs">
-                  ✓
-                </span>
-              )}
-            </motion.button>
+            <div key={item.letter} className="relative flex items-center justify-center">
+              {/* Pulsing halo ring behind the active bubble */}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.6 }}
+                    animate={{
+                      opacity: [0.5, 0.9, 0.5],
+                      scale: [1, 1.35, 1],
+                    }}
+                    exit={{ opacity: 0, scale: 0.6 }}
+                    transition={{
+                      duration: 1.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="absolute inset-0 rounded-full pointer-events-none z-0"
+                    style={{
+                      background: `radial-gradient(circle, ${glowColor}88 0%, ${glowColor}44 40%, transparent 70%)`,
+                      inset: "-14px",
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+
+              <motion.button
+                variants={bounceIn}
+                animate={
+                  isActive
+                    ? {
+                        scale: [1, 1.1, 1],
+                        boxShadow: [
+                          `0 4px 0 rgba(0,0,0,0.15), 0 0 20px ${glowColor}, 0 0 40px ${glowColor}88`,
+                          `0 4px 0 rgba(0,0,0,0.15), 0 0 30px ${glowColor}, 0 0 50px ${glowColor}88`,
+                          `0 4px 0 rgba(0,0,0,0.15), 0 0 20px ${glowColor}, 0 0 40px ${glowColor}88`,
+                        ],
+                        transition: {
+                          duration: 1.2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        },
+                      }
+                    : {
+                        scale: 1,
+                        boxShadow: "0 4px 0 rgba(0,0,0,0.15)",
+                      }
+                }
+                whileHover={{
+                  scale: 1.15,
+                  transition: { type: "spring", stiffness: 400, damping: 12 },
+                }}
+                whileTap={{
+                  scale: 0.92,
+                  transition: { type: "spring", stiffness: 400, damping: 15 },
+                }}
+                onTap={() => handleTap(item.letter)}
+                className={cn(
+                  "relative z-10 flex items-center justify-center rounded-full",
+                  "w-[50px] h-[50px] sm:w-[64px] sm:h-[64px] md:w-[68px] md:h-[68px]",
+                  "min-w-[48px] min-h-[48px]",
+                  "font-display font-extrabold text-white text-lg sm:text-2xl",
+                  "cursor-pointer select-none",
+                  BUBBLE_COLORS[colorIdx]
+                )}
+                style={{
+                  textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                }}
+                aria-label={`Letter ${item.letter}`}
+              >
+                {item.letter}
+              </motion.button>
+            </div>
           );
         })}
       </motion.div>
@@ -226,8 +262,21 @@ export default function AlphabetGame() {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="bg-white/80 backdrop-blur-sm rounded-card shadow-card p-6 sm:p-8 max-w-md mx-auto"
+            className="relative bg-white/80 backdrop-blur-sm rounded-card shadow-card p-6 sm:p-8 max-w-md mx-auto"
           >
+            {/* Close button */}
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveLetter(null)}
+              className="absolute top-3 right-3 w-9 h-9 min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full bg-night/10 hover:bg-night/20 text-night/50 hover:text-night/80 transition-colors cursor-pointer -m-2 p-2"
+              aria-label="Close word card"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </motion.button>
+
             {/* Emoji */}
             <motion.div
               initial={{ scale: 0 }}
