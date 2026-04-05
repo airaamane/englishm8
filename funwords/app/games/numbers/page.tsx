@@ -95,11 +95,45 @@ interface RoundData {
   emojiPositions: { x: number; y: number; rotate: number }[];
 }
 
+/**
+ * Lay out `count` emojis in rows of up to 5, centred inside the 300×200
+ * display stage.  Every position is calculated — never random — so the
+ * on-screen count is always exact and nothing overlaps.
+ * A tiny jitter (±4 px, ±10°) is added so it looks hand-placed rather
+ * than mechanical.
+ */
+function gridPositions(
+  count: number,
+): { x: number; y: number; rotate: number }[] {
+  const COLS = 5;
+  const rows = Math.ceil(count / COLS);
+
+  // Shrink spacing slightly for larger grids so everything fits the stage
+  const gap = count <= 5 ? 54 : count <= 10 ? 50 : 44;
+
+  const gridW = (Math.min(count, COLS) - 1) * gap;
+  const gridH = (rows - 1) * gap;
+
+  return Array.from({ length: count }, (_, i) => {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    // Centre-align the last (possibly partial) row
+    const rowCount = row === rows - 1 ? count - row * COLS : COLS;
+    const rowOffset = ((COLS - rowCount) / 2) * gap;
+
+    return {
+      x: col * gap - gridW / 2 + rowOffset + (Math.random() - 0.5) * 8,
+      y: row * gap - gridH / 2 + (Math.random() - 0.5) * 8,
+      rotate: (Math.random() - 0.5) * 20,
+    };
+  });
+}
+
 function generateRound(): RoundData {
   const number = rand(1, 20);
   const emoji = EMOJIS[rand(0, EMOJIS.length - 1)];
 
-  // Generate 3 distractors within ±3, clamped 1-20, no duplicates
+  // Generate 3 distractors within ±3, clamped 1–20, no duplicates
   const distractors = new Set<number>();
   while (distractors.size < 3) {
     const d = rand(Math.max(1, number - 3), Math.min(20, number + 3));
@@ -107,15 +141,7 @@ function generateRound(): RoundData {
   }
   const choices = shuffle([number, ...distractors]);
 
-  // Generate emoji positions with density based on count
-  const spreadFactor = number <= 5 ? 1.2 : number <= 10 ? 0.9 : 0.6;
-  const emojiPositions = Array.from({ length: number }, () => ({
-    x: (Math.random() - 0.5) * 260 * spreadFactor,
-    y: (Math.random() - 0.5) * 160 * spreadFactor,
-    rotate: (Math.random() - 0.5) * 30, // -15 to +15
-  }));
-
-  return { number, emoji, choices, emojiPositions };
+  return { number, emoji, choices, emojiPositions: gridPositions(number) };
 }
 
 /* ── component ───────────────────────────────────────── */

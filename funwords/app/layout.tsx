@@ -1,25 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Comic_Neue, Patrick_Hand } from "next/font/google";
 import "./globals.css";
 import { ClientLayout } from "./client-layout";
-
-const baloo = Baloo_2({
-  subsets: ["latin"],
-  variable: "--font-baloo2",
-  weight: ["400", "600", "700", "800"],
-});
-
-const comicNeue = Comic_Neue({
-  subsets: ["latin"],
-  variable: "--font-comic-neue",
-  weight: ["400", "700"],
-});
-
-const patrickHand = Patrick_Hand({
-  subsets: ["latin"],
-  variable: "--font-patrick-hand",
-  weight: ["400"],
-});
 
 export const metadata: Metadata = {
   title: "FunWords! — Learn English the Fun Way",
@@ -39,10 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${baloo.variable} ${comicNeue.variable} ${patrickHand.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Comic+Neue:wght@400;700&family=Patrick+Hand&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col font-body text-night">
         <ClientLayout>{children}</ClientLayout>
       </body>
